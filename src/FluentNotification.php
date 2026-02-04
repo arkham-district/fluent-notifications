@@ -9,10 +9,10 @@ use BadMethodCallException;
 /**
  * Fluent notification builder.
  *
- * @method self success() Set notification type to success
- * @method self error() Set notification type to error
- * @method self warning() Set notification type to warning
- * @method self info() Set notification type to info
+ * @method self success() Set a notification type to success
+ * @method self error() Set a notification type to error
+ * @method self warning() Set a notification type to warning
+ * @method self info() Set a notification type to info
  */
 final class FluentNotification
 {
@@ -32,7 +32,7 @@ final class FluentNotification
      * @param  array<string, mixed>  $context  Context data for translation
      */
     public function __construct(
-        private mixed $notifiable,
+        private readonly mixed $notifiable,
         private string $key,
         private array $context = [],
     ) {
