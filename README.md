@@ -1,6 +1,6 @@
 # Fluent Notifications for Laravel
 
-[![Tests](https://github.com/arkham-district/fluent-notifications/actions/workflows/tests.yml/badge.svg)](https://github.com/arkham-district/fluent-notifications/actions)
+[![Tests](https://github.com/arkham-district/fluent-notifications/actions/workflows/tests.yml/badge.svg)](https://github.com/arkham-district/fluent-notifications/actions/workflows/tests.yml)
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/arkham-district/fluent-notifications.svg)](https://packagist.org/packages/arkham-district/fluent-notifications)
 [![License](https://img.shields.io/packagist/l/arkham-district/fluent-notifications.svg)](https://packagist.org/packages/arkham-district/fluent-notifications)
 
