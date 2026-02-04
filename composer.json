@@ -1,0 +1,50 @@
+{
+    "name": "arkham-district/fluent-notifications",
+    "description": "Simplified fluent API for Laravel notifications with multi-channel support",
+    "keywords": ["laravel", "notifications", "toast", "alert", "fluent"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Arkham District",
+            "email": "contact@arkhamdistrict.com"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/notifications": "^11.0|^12.0",
+        "illuminate/support": "^11.0|^12.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0|^10.0",
+        "pestphp/pest": "^3.0",
+        "pestphp/pest-plugin-laravel": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "ArkhamDistrict\\FluentNotifications\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ArkhamDistrict\\FluentNotifications\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "ArkhamDistrict\\FluentNotifications\\FluentNotificationsServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage --min=100"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}
