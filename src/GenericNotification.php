@@ -6,16 +6,12 @@ namespace ArkhamDistrict\FluentNotifications;
 
 use ArkhamDistrict\FluentNotifications\Channels\AlertChannel;
 use ArkhamDistrict\FluentNotifications\Channels\ToastChannel;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-final class GenericNotification extends Notification implements ShouldQueue
+final class GenericNotification extends Notification
 {
-    use Queueable;
-
     private const CHANNEL_MAP = [
         'toast' => ToastChannel::class,
         'alert' => AlertChannel::class,
@@ -34,12 +30,7 @@ final class GenericNotification extends Notification implements ShouldQueue
         public readonly string $key,
         public readonly array $context = [],
         public readonly array $channels = ['toast'],
-    ) {
-        if (config('fluent-notifications.queue.enabled', false)) {
-            $this->onConnection(config('fluent-notifications.queue.connection'));
-            $this->onQueue(config('fluent-notifications.queue.queue'));
-        }
-    }
+    ) {}
 
     /**
      * Get the notification's delivery channels.

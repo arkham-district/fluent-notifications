@@ -127,17 +127,3 @@ it('formats toDatabase correctly', function () {
         'context' => ['reason' => 'Insufficient funds'],
     ]);
 });
-
-it('respects queue configuration', function () {
-    config()->set('fluent-notifications.queue.enabled', true);
-    config()->set('fluent-notifications.queue.connection', 'redis');
-    config()->set('fluent-notifications.queue.queue', 'notifications');
-
-    $notification = new GenericNotification(
-        type: 'info',
-        key: 'test',
-    );
-
-    expect($notification->connection)->toBe('redis')
-        ->and($notification->queue)->toBe('notifications');
-});
