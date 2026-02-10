@@ -12,10 +12,12 @@ beforeEach(function () {
     $this->notifiable = new stdClass;
 });
 
+// --- Channel Mapping ---
+
 it('returns correct channels via method', function () {
     $notification = new GenericNotification(
         type: 'info',
-        key: 'test.key',
+        title: 'Test',
         channels: ['mail', 'database'],
     );
 
@@ -25,7 +27,7 @@ it('returns correct channels via method', function () {
 it('maps custom channels to classes', function () {
     $notification = new GenericNotification(
         type: 'info',
-        key: 'test.key',
+        title: 'Test',
         channels: ['toast', 'alert', 'mail'],
     );
 
@@ -36,53 +38,115 @@ it('maps custom channels to classes', function () {
     ]);
 });
 
-it('translates key when config enabled', function () {
-    config()->set('fluent-notifications.translate', true);
+// --- Title + Message ---
 
-    $notification = new GenericNotification(
-        type: 'success',
-        key: 'notifications.order_created',
-        context: ['id' => 42],
-    );
-
-    // When no translation file exists, __() returns the key itself
-    expect($notification->message())->toBe('notifications.order_created');
-});
-
-it('uses literal key when config disabled', function () {
-    config()->set('fluent-notifications.translate', false);
-
-    $notification = new GenericNotification(
-        type: 'info',
-        key: 'Your order was shipped!',
-    );
-
-    expect($notification->message())->toBe('Your order was shipped!');
-});
-
-it('formats toArray correctly', function () {
+it('accepts title only', function () {
     config()->set('fluent-notifications.translate', false);
 
     $notification = new GenericNotification(
         type: 'success',
-        key: 'Order created',
-        context: ['id' => 1],
+        title: 'Profile Updated',
     );
 
     expect($notification->toArray($this->notifiable))->toBe([
         'type' => 'success',
-        'key' => 'Order created',
-        'message' => 'Order created',
-        'context' => ['id' => 1],
+        'title' => 'Profile Updated',
+        'message' => null,
+        'context' => [],
     ]);
 });
 
-it('formats toMail correctly', function () {
+it('accepts title and message', function () {
+    config()->set('fluent-notifications.translate', false);
+
+    $notification = new GenericNotification(
+        type: 'success',
+        title: 'Profile Updated',
+        message: 'Your changes have been saved.',
+    );
+
+    expect($notification->toArray($this->notifiable))->toBe([
+        'type' => 'success',
+        'title' => 'Profile Updated',
+        'message' => 'Your changes have been saved.',
+        'context' => [],
+    ]);
+});
+
+it('accepts title, message and context', function () {
     config()->set('fluent-notifications.translate', false);
 
     $notification = new GenericNotification(
         type: 'info',
-        key: 'Welcome aboard!',
+        title: 'Order Shipped',
+        message: 'Tracking: :code',
+        context: ['code' => 'ABC123'],
+    );
+
+    expect($notification->toArray($this->notifiable))->toBe([
+        'type' => 'info',
+        'title' => 'Order Shipped',
+        'message' => 'Tracking: :code',
+        'context' => ['code' => 'ABC123'],
+    ]);
+});
+
+// --- Translation ---
+
+it('translates title and message when config enabled', function () {
+    config()->set('fluent-notifications.translate', true);
+
+    $notification = new GenericNotification(
+        type: 'success',
+        title: 'notifications.title',
+        message: 'notifications.body',
+        context: ['id' => 42],
+    );
+
+    // When no translation file exists, __() returns the key itself
+    $data = $notification->toArray($this->notifiable);
+
+    expect($data['title'])->toBe('notifications.title')
+        ->and($data['message'])->toBe('notifications.body');
+});
+
+it('uses literal strings when translation disabled', function () {
+    config()->set('fluent-notifications.translate', false);
+
+    $notification = new GenericNotification(
+        type: 'info',
+        title: 'Your order was shipped!',
+        message: 'Check your email for details.',
+    );
+
+    $data = $notification->toArray($this->notifiable);
+
+    expect($data['title'])->toBe('Your order was shipped!')
+        ->and($data['message'])->toBe('Check your email for details.');
+});
+
+it('handles null message with translation enabled', function () {
+    config()->set('fluent-notifications.translate', true);
+
+    $notification = new GenericNotification(
+        type: 'info',
+        title: 'notifications.saved',
+    );
+
+    $data = $notification->toArray($this->notifiable);
+
+    expect($data['message'])->toBeNull();
+});
+
+// --- Mail ---
+
+it('formats toMail with title as subject', function () {
+    config()->set('fluent-notifications.translate', false);
+
+    $notification = new GenericNotification(
+        type: 'info',
+        title: 'Welcome aboard!',
+        message: 'We are glad to have you.',
     );
 
     $mail = $notification->toMail($this->notifiable);
@@ -91,12 +155,15 @@ it('formats toMail correctly', function () {
         ->and($mail->subject)->toBe('Welcome aboard!');
 });
 
+// --- Broadcast ---
+
 it('formats toBroadcast correctly', function () {
     config()->set('fluent-notifications.translate', false);
 
     $notification = new GenericNotification(
         type: 'warning',
-        key: 'Low stock alert',
+        title: 'Low stock alert',
+        message: 'Product :product is running low.',
         context: ['product' => 'Widget'],
     );
 
@@ -105,25 +172,28 @@ it('formats toBroadcast correctly', function () {
     expect($broadcast)->toBeInstanceOf(BroadcastMessage::class)
         ->and($broadcast->data)->toBe([
             'type' => 'warning',
-            'key' => 'Low stock alert',
-            'message' => 'Low stock alert',
+            'title' => 'Low stock alert',
+            'message' => 'Product :product is running low.',
             'context' => ['product' => 'Widget'],
         ]);
 });
+
+// --- Database ---
 
 it('formats toDatabase correctly', function () {
     config()->set('fluent-notifications.translate', false);
 
     $notification = new GenericNotification(
         type: 'error',
-        key: 'Payment failed',
+        title: 'Payment failed',
+        message: 'Reason: :reason',
         context: ['reason' => 'Insufficient funds'],
     );
 
     expect($notification->toDatabase($this->notifiable))->toBe([
         'type' => 'error',
-        'key' => 'Payment failed',
-        'message' => 'Payment failed',
+        'title' => 'Payment failed',
+        'message' => 'Reason: :reason',
         'context' => ['reason' => 'Insufficient funds'],
     ]);
 });

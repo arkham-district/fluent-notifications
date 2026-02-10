@@ -5,67 +5,93 @@ declare(strict_types=1);
 use ArkhamDistrict\FluentNotifications\Channels\AlertChannel;
 use ArkhamDistrict\FluentNotifications\GenericNotification;
 use Illuminate\Notifications\Notification;
+use Inertia\Inertia;
 
 beforeEach(function () {
+    AlertChannel::flush();
+
     $this->channel = new AlertChannel;
     $this->notifiable = new stdClass;
+
+    Inertia::spy();
 });
 
-it('stores notification in session', function () {
+it('flashes notification via Inertia', function () {
     config()->set('fluent-notifications.translate', false);
 
     $notification = new GenericNotification(
         type: 'error',
-        key: 'Something went wrong!',
+        title: 'Something went wrong!',
+        message: 'Please try again later.',
     );
 
     $this->channel->send($this->notifiable, $notification);
 
-    $alerts = session()->get('alerts');
-
-    expect($alerts)->toHaveCount(1)
-        ->and($alerts[0])->toBe([
+    Inertia::shouldHaveReceived('flash')
+        ->with('alerts', [[
             'type' => 'error',
-            'key' => 'Something went wrong!',
-            'message' => 'Something went wrong!',
+            'title' => 'Something went wrong!',
+            'message' => 'Please try again later.',
             'context' => [],
-        ]);
+        ]]);
 });
 
-it('uses configured session key', function () {
+it('flashes title-only alert', function () {
     config()->set('fluent-notifications.translate', false);
-    config()->set('fluent-notifications.session.alerts', 'flash_alerts');
 
     $notification = new GenericNotification(
         type: 'warning',
-        key: 'Attention',
+        title: 'Attention',
     );
 
     $this->channel->send($this->notifiable, $notification);
 
-    expect(session()->get('flash_alerts'))->toHaveCount(1)
-        ->and(session()->get('alerts'))->toBeNull();
+    Inertia::shouldHaveReceived('flash')
+        ->with('alerts', [[
+            'type' => 'warning',
+            'title' => 'Attention',
+            'message' => null,
+            'context' => [],
+        ]]);
 });
 
-it('appends to existing alerts', function () {
+it('uses configured flash key', function () {
     config()->set('fluent-notifications.translate', false);
-
-    session()->put('alerts', [
-        ['type' => 'info', 'key' => 'First', 'message' => 'First', 'context' => []],
-    ]);
+    config()->set('fluent-notifications.flash.alerts', 'flash_alerts');
 
     $notification = new GenericNotification(
-        type: 'error',
-        key: 'Second',
+        type: 'warning',
+        title: 'Attention',
     );
 
     $this->channel->send($this->notifiable, $notification);
 
-    $alerts = session()->get('alerts');
+    Inertia::shouldHaveReceived('flash')
+        ->with('flash_alerts', Mockery::any());
+});
 
-    expect($alerts)->toHaveCount(2)
-        ->and($alerts[0]['key'])->toBe('First')
-        ->and($alerts[1]['key'])->toBe('Second');
+it('appends to existing alerts within same request', function () {
+    config()->set('fluent-notifications.translate', false);
+
+    $first = new GenericNotification(
+        type: 'info',
+        title: 'First',
+    );
+
+    $second = new GenericNotification(
+        type: 'error',
+        title: 'Second',
+    );
+
+    $this->channel->send($this->notifiable, $first);
+    $this->channel->send($this->notifiable, $second);
+
+    Inertia::shouldHaveReceived('flash')
+        ->with('alerts', Mockery::on(function (array $alerts) {
+            return count($alerts) === 2
+                && $alerts[0]['title'] === 'First'
+                && $alerts[1]['title'] === 'Second';
+        }));
 });
 
 it('ignores non-generic notifications', function () {
@@ -79,5 +105,5 @@ it('ignores non-generic notifications', function () {
 
     $this->channel->send($this->notifiable, $notification);
 
-    expect(session()->get('alerts'))->toBeNull();
+    Inertia::shouldNotHaveReceived('flash');
 });

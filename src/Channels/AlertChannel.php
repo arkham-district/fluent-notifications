@@ -10,20 +10,29 @@ use Inertia\Inertia;
 
 final class AlertChannel
 {
+    private static array $pending = [];
+
     /**
-     * Send the given notification as an alert via the session.
+     * Send the given notification as an alert via Inertia flash.
      */
     public function send(object $notifiable, Notification $notification): void
     {
-        if (!$notification instanceof GenericNotification) {
+        if (! $notification instanceof GenericNotification) {
             return;
         }
 
-        $key = config('fluent-notifications.session.alerts', 'alerts');
+        $key = config('fluent-notifications.flash.alerts', 'alerts');
 
-        $alerts = session()->get($key, []);
-        $alerts[] = $notification->toArray($notifiable);
+        self::$pending[$key][] = $notification->toArray($notifiable);
 
-        Inertia::flash($key, $alerts);
+        Inertia::flash($key, self::$pending[$key]);
+    }
+
+    /**
+     * Reset pending notifications (useful for testing).
+     */
+    public static function flush(): void
+    {
+        self::$pending = [];
     }
 }

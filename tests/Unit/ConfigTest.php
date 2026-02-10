@@ -15,8 +15,8 @@ it('has default type value', function () {
 });
 
 it('has session keys configured', function () {
-    expect(config('fluent-notifications.session.toasts'))->toBe('toasts')
-        ->and(config('fluent-notifications.session.alerts'))->toBe('alerts');
+    expect(config('fluent-notifications.flash.toasts'))->toBe('toasts')
+        ->and(config('fluent-notifications.flash.alerts'))->toBe('alerts');
 });
 
 it('has queue configuration', function () {

@@ -23,7 +23,7 @@ beforeEach(function () {
 it('returns fluent notification when passing string', function () {
     NotificationFacade::fake();
 
-    $result = $this->user->notify('order.created');
+    $result = $this->user->notify('Order Created');
 
     expect($result)->toBeInstanceOf(FluentNotification::class);
 });
@@ -51,26 +51,41 @@ it('dispatches laravel notification when passing object', function () {
     NotificationFacade::assertSentTo($this->user, $notification::class);
 });
 
-it('works with fluent chain', function () {
+it('accepts title and message', function () {
     NotificationFacade::fake();
 
-    $this->user->notify('test.key')
+    $this->user->notify('Profile Updated', 'Your changes have been saved.')
         ->success()
         ->via(['toast'])
         ->send();
 
     NotificationFacade::assertSentTo($this->user, GenericNotification::class, function ($notification) {
-        return $notification->type === 'success'
+        return $notification->title === 'Profile Updated'
+            && $notification->message === 'Your changes have been saved.'
+            && $notification->type === 'success'
             && $notification->channels === ['toast'];
     });
 });
 
-it('passes context to notification', function () {
+it('passes context as third argument', function () {
     NotificationFacade::fake();
 
-    $this->user->notify('order.shipped', ['tracking' => 'XYZ'])->send();
+    $this->user->notify('Order Shipped', 'Tracking: :code', ['code' => 'XYZ'])->send();
 
     NotificationFacade::assertSentTo($this->user, GenericNotification::class, function ($notification) {
-        return $notification->context === ['tracking' => 'XYZ'];
+        return $notification->title === 'Order Shipped'
+            && $notification->message === 'Tracking: :code'
+            && $notification->context === ['code' => 'XYZ'];
+    });
+});
+
+it('works with title only', function () {
+    NotificationFacade::fake();
+
+    $this->user->notify('Settings Saved')->send();
+
+    NotificationFacade::assertSentTo($this->user, GenericNotification::class, function ($notification) {
+        return $notification->title === 'Settings Saved'
+            && $notification->message === null;
     });
 });

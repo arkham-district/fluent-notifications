@@ -8,8 +8,8 @@ return [
     | Translation Mode
     |--------------------------------------------------------------------------
     |
-    | When true, notification keys are passed through Laravel's __() helper.
-    | When false, keys are used as literal strings.
+    | When true, title and message are passed through Laravel's __() helper.
+    | When false, they are used as literal strings.
     |
     */
     'translate' => true,
@@ -36,13 +36,13 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Session Keys
+    | Flash Keys
     |--------------------------------------------------------------------------
     |
-    | Session keys used by toast and alert channels.
+    | Inertia flash keys used by toast and alert channels.
     |
     */
-    'session' => [
+    'flash' => [
         'toasts' => 'toasts',
         'alerts' => 'alerts',
     ],

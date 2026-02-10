@@ -10,20 +10,29 @@ use Inertia\Inertia;
 
 final class ToastChannel
 {
+    private static array $pending = [];
+
     /**
-     * Send the given notification as a toast via the session.
+     * Send the given notification as a toast via Inertia flash.
      */
     public function send(object $notifiable, Notification $notification): void
     {
-        if (!$notification instanceof GenericNotification) {
+        if (! $notification instanceof GenericNotification) {
             return;
         }
 
-        $key = config('fluent-notifications.session.toasts', 'toasts');
+        $key = config('fluent-notifications.flash.toasts', 'toasts');
 
-        $toasts = session()->get($key, []);
-        $toasts[] = $notification->toArray($notifiable);
+        self::$pending[$key][] = $notification->toArray($notifiable);
 
-        Inertia::flash($key, $toasts);
+        Inertia::flash($key, self::$pending[$key]);
+    }
+
+    /**
+     * Reset pending notifications (useful for testing).
+     */
+    public static function flush(): void
+    {
+        self::$pending = [];
     }
 }

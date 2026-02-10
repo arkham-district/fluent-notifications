@@ -28,12 +28,14 @@ final class FluentNotification
      * Create a new fluent notification builder.
      *
      * @param  mixed  $notifiable  The notifiable entity
-     * @param  string  $key  The notification key or message
-     * @param  array<string, mixed>  $context  Context data for translation
+     * @param  string  $title  The notification title
+     * @param  string|null  $message  Optional message body
+     * @param  array<string, mixed>  $context  Context data for translation interpolation
      */
     public function __construct(
         private readonly mixed $notifiable,
-        private string $key,
+        private string $title,
+        private ?string $message = null,
         private array $context = [],
     ) {
         $this->type = config('fluent-notifications.default_type', 'info');
@@ -72,6 +74,18 @@ final class FluentNotification
     }
 
     /**
+     * Set the context data for translation interpolation.
+     *
+     * @param  array<string, mixed>  $context  Context data
+     */
+    public function context(array $context): self
+    {
+        $this->context = $context;
+
+        return $this;
+    }
+
+    /**
      * Send the notification immediately.
      */
     public function send(): void
@@ -85,7 +99,8 @@ final class FluentNotification
         $this->notifiable->baseNotify(
             new GenericNotification(
                 type: $this->type,
-                key: $this->key,
+                title: $this->title,
+                message: $this->message,
                 context: $this->context,
                 channels: $this->channels,
             )

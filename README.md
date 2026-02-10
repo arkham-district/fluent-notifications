@@ -4,12 +4,13 @@
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/arkham-district/fluent-notifications.svg)](https://packagist.org/packages/arkham-district/fluent-notifications)
 [![License](https://img.shields.io/packagist/l/arkham-district/fluent-notifications.svg)](https://packagist.org/packages/arkham-district/fluent-notifications)
 
-A simplified fluent API for Laravel notifications with multi-channel support. Send notifications to multiple channels (toast, alert, mail, database, broadcast) with a single, expressive call.
+A simplified fluent API for Laravel notifications with multi-channel support and Inertia.js integration. Send notifications to multiple channels (toast, alert, mail, database, broadcast) with a single, expressive call.
 
 ## Requirements
 
 - PHP ^8.2
 - Laravel ^11.0 or ^12.0
+- Inertia.js (via `inertiajs/inertia-laravel` ^2.0)
 
 ## Installation
 
@@ -46,21 +47,26 @@ class User extends Authenticatable
 ### Basic Usage
 
 ```php
-// Send a toast notification using a translation key
-$user->notify('order.created', ['tracking' => $code])
-    ->success()
-    ->via(['toast']);
+// Title only
+$user->notify('Profile Updated')->success()->via(['toast']);
 
-// Send a literal string (no translation)
-$user->notify('Your order was shipped!')
-    ->info()
-    ->via(['toast']);
+// Title + message
+$user->notify('Profile Updated', 'Your changes have been saved.')->success()->via(['toast']);
+
+// Title + message + inline context
+$user->notify('Order Shipped', 'Tracking: :code', ['code' => 'ABC123'])->success()->via(['toast']);
+
+// Context via fluent method
+$user->notify('Order Shipped', 'Tracking: :code')
+    ->context(['code' => 'ABC123'])
+    ->success()
+    ->send();
 ```
 
 ### Notification Types
 
 ```php
-$user->notify('...')
+$user->notify('Something happened')
     ->success()   // Green / success style
     ->error()     // Red / error style
     ->warning()   // Yellow / warning style
@@ -70,20 +76,20 @@ $user->notify('...')
 ### Multiple Channels
 
 ```php
-$user->notify('order.created', ['id' => $order->id])
+$user->notify('Order Created', 'Your order #:id has been placed.', ['id' => $order->id])
     ->success()
     ->via(['toast', 'mail', 'database']);
 ```
 
 ### Available Channels
 
-| Channel     | Description                        |
-|-------------|------------------------------------|
-| `toast`     | Session flash for frontend toasts  |
-| `alert`     | Session flash for persistent alerts|
-| `mail`      | Laravel Mail (native)              |
-| `database`  | Laravel Database (native)          |
-| `broadcast` | Laravel Broadcast (native)         |
+| Channel     | Description                              |
+|-------------|------------------------------------------|
+| `toast`     | Inertia flash for frontend toasts        |
+| `alert`     | Inertia flash for persistent alerts      |
+| `mail`      | Laravel Mail (native)                    |
+| `database`  | Laravel Database (native)                |
+| `broadcast` | Laravel Broadcast (native)               |
 
 ### Backward Compatibility
 
@@ -98,14 +104,14 @@ $user->notify(new CustomNotification());
 The notification is automatically sent when the builder goes out of scope. You don't need to call `->send()` explicitly:
 
 ```php
-// This works - notification is sent when $builder goes out of scope
-$user->notify('order.created')->success()->via(['toast']);
+// This works - notification is sent when the builder goes out of scope
+$user->notify('Profile Updated')->success()->via(['toast']);
 ```
 
 You can also call `->send()` explicitly if you prefer:
 
 ```php
-$user->notify('order.created')->success()->via(['toast'])->send();
+$user->notify('Profile Updated')->success()->via(['toast'])->send();
 ```
 
 ## Configuration
@@ -114,7 +120,7 @@ $user->notify('order.created')->success()->via(['toast'])->send();
 // config/fluent-notifications.php
 
 return [
-    // Pass notification keys through __() for translation
+    // Pass notification title/message through __() for translation
     'translate' => true,
 
     // Default channels when via() is not called
@@ -123,48 +129,32 @@ return [
     // Default notification type
     'default_type' => 'info',
 
-    // Session keys for toast and alert channels
-    'session' => [
+    // Inertia flash keys for toast and alert channels
+    'flash' => [
         'toasts' => 'toasts',
         'alerts' => 'alerts',
-    ],
-
-    // Queue configuration
-    'queue' => [
-        'enabled' => false,
-        'connection' => null,
-        'queue' => null,
     ],
 ];
 ```
 
 ## Frontend Integration
 
-### Reading Toasts from Session
+### How It Works
 
-Toasts are stored in the session under the configured key (default: `toasts`). Each toast has this structure:
+Toast and alert channels use `Inertia::flash()` to share data with the frontend. The notification payload is automatically available in your Inertia page props.
+
+Each notification has this structure:
 
 ```json
 {
     "type": "success",
-    "key": "order.created",
-    "message": "Your order has been created!",
-    "context": {"tracking": "ABC123"}
+    "title": "Profile Updated",
+    "message": "Your changes have been saved.",
+    "context": {}
 }
 ```
 
 ### Vue.js / Inertia
-
-```php
-// HandleInertiaRequests middleware
-public function share(Request $request): array
-{
-    return [
-        'toasts' => session()->pull('toasts', []),
-        'alerts' => session()->pull('alerts', []),
-    ];
-}
-```
 
 ```vue
 <script setup>
@@ -174,30 +164,11 @@ import { watch } from 'vue'
 const page = usePage()
 
 watch(() => page.props.toasts, (toasts) => {
-    toasts.forEach(toast => {
-        // Show toast using your preferred toast library
-        showToast(toast.message, toast.type)
+    toasts?.forEach(toast => {
+        showToast(toast.title, toast.message, toast.type)
     })
 })
 </script>
-```
-
-### Livewire
-
-```php
-// In your Livewire component
-public function save()
-{
-    // ... save logic
-
-    auth()->user()->notify('item.saved')->success()->via(['toast']);
-
-    // Read toasts from session and dispatch browser event
-    $toasts = session()->pull('toasts', []);
-    foreach ($toasts as $toast) {
-        $this->dispatch('toast', ...$toast);
-    }
-}
 ```
 
 ### React / Inertia
@@ -211,24 +182,12 @@ export default function Layout({ children }) {
 
     useEffect(() => {
         toasts?.forEach(toast => {
-            showToast(toast.message, toast.type)
+            showToast(toast.title, toast.message, toast.type)
         })
     }, [toasts])
 
     return <>{children}</>
 }
-```
-
-### Blade
-
-```php
-@if(session('toasts'))
-    @foreach(session()->pull('toasts') as $toast)
-        <div class="toast toast-{{ $toast['type'] }}">
-            {{ $toast['message'] }}
-        </div>
-    @endforeach
-@endif
 ```
 
 ## Creating Custom Channels
@@ -259,7 +218,7 @@ class SlackChannel
 Then use the fully qualified class name:
 
 ```php
-$user->notify('deploy.complete')
+$user->notify('Deploy Complete', 'Version :version is now live.', ['version' => '2.1.0'])
     ->success()
     ->via([App\Channels\SlackChannel::class]);
 ```

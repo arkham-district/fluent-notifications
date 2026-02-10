@@ -21,13 +21,15 @@ final class GenericNotification extends Notification
      * Create a new generic notification instance.
      *
      * @param  string  $type  The notification type (success, error, warning, info)
-     * @param  string  $key  The notification key or message
-     * @param  array<string, mixed>  $context  Context data for translation
+     * @param  string  $title  The notification title
+     * @param  string|null  $message  Optional message body
+     * @param  array<string, mixed>  $context  Context data for translation interpolation
      * @param  array<int, string>  $channels  The channels to send through
      */
     public function __construct(
         public readonly string $type,
-        public readonly string $key,
+        public readonly string $title,
+        public readonly ?string $message = null,
         public readonly array $context = [],
         public readonly array $channels = ['toast'],
     ) {}
@@ -46,15 +48,31 @@ final class GenericNotification extends Notification
     }
 
     /**
-     * Get the resolved notification message.
+     * Get the resolved title.
      */
-    public function message(): string
+    public function resolvedTitle(): string
     {
         if (config('fluent-notifications.translate', true)) {
-            return __($this->key, $this->context);
+            return __($this->title, $this->context);
         }
 
-        return $this->key;
+        return $this->title;
+    }
+
+    /**
+     * Get the resolved message.
+     */
+    public function resolvedMessage(): ?string
+    {
+        if ($this->message === null) {
+            return null;
+        }
+
+        if (config('fluent-notifications.translate', true)) {
+            return __($this->message, $this->context);
+        }
+
+        return $this->message;
     }
 
     /**
@@ -66,8 +84,8 @@ final class GenericNotification extends Notification
     {
         return [
             'type' => $this->type,
-            'key' => $this->key,
-            'message' => $this->message(),
+            'title' => $this->resolvedTitle(),
+            'message' => $this->resolvedMessage(),
             'context' => $this->context,
         ];
     }
@@ -77,9 +95,13 @@ final class GenericNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject($this->message())
-            ->line($this->message());
+        $mail = (new MailMessage)->subject($this->resolvedTitle());
+
+        if ($this->message !== null) {
+            $mail->line($this->resolvedMessage());
+        }
+
+        return $mail;
     }
 
     /**
