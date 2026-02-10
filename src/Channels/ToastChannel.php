@@ -6,6 +6,7 @@ namespace ArkhamDistrict\FluentNotifications\Channels;
 
 use ArkhamDistrict\FluentNotifications\GenericNotification;
 use Illuminate\Notifications\Notification;
+use Inertia\Inertia;
 
 final class ToastChannel
 {
@@ -14,13 +15,15 @@ final class ToastChannel
      */
     public function send(object $notifiable, Notification $notification): void
     {
-        if (! $notification instanceof GenericNotification) {
+        if (!$notification instanceof GenericNotification) {
             return;
         }
 
         $key = config('fluent-notifications.session.toasts', 'toasts');
+
         $toasts = session()->get($key, []);
         $toasts[] = $notification->toArray($notifiable);
-        session()->put($key, $toasts);
+
+        Inertia::flash($key, $toasts);
     }
 }
